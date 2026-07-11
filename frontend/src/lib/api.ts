@@ -113,4 +113,27 @@ export const api = {
     req<Check>(`/api/checks/${checkId}/complete`, { method: "POST", body: "{}" }),
   imageUrl: (id: number) => `/api/images/${id}`,
   thumbUrl: (id: number) => `/api/images/${id}/thumb`,
+
+  // AI review (MedGemma node on the LAN)
+  visionStatus: () => req<VisionStatus>("/api/vision/status"),
+  reviewCheck: (checkId: number) =>
+    req<ReviewResult>(`/api/checks/${checkId}/review`, { method: "POST", body: "{}" }),
 };
+
+export interface VisionStatus {
+  provider: string;
+  endpoint: string;
+  model: string;
+  enabled: boolean;
+  reachable: boolean;
+  version?: string;
+}
+
+export interface ReviewResult {
+  check_id: number;
+  images_reviewed: number;
+  views: string[];
+  model: string;
+  review: string;
+  disclaimer: string;
+}

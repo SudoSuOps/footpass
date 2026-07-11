@@ -23,6 +23,12 @@ class Settings(BaseSettings):
     # Security
     footpass_secret_key: str = "dev-insecure-change-me"
 
+    # Vision / AI review (local network MedGemma node). "none" disables it.
+    footpass_vision_provider: str = "none"  # none | remote_local_network | local_gpu
+    footpass_vision_endpoint: str = "http://192.168.0.79:11434"
+    footpass_vision_model: str = "footpass-medgemma"
+    footpass_vision_timeout: int = 240
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
