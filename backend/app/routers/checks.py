@@ -58,3 +58,15 @@ def get_check(check_id: int, db: Session = Depends(get_db)) -> DailyCheck:
     if check is None:
         raise HTTPException(status_code=404, detail="check not found")
     return check
+
+
+@router.post("/{check_id}/complete", response_model=CheckOut)
+def complete_check(check_id: int, db: Session = Depends(get_db)) -> DailyCheck:
+    check = db.get(DailyCheck, check_id)
+    if check is None:
+        raise HTTPException(status_code=404, detail="check not found")
+    check.status = "completed"
+    check.completed_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(check)
+    return check

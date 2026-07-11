@@ -44,6 +44,29 @@ export interface StatusCardData {
   last_backup?: string | null;
 }
 
+export interface CaptureResult {
+  ok: boolean;
+  width: number;
+  height: number;
+  device_index: number;
+  quality: { brightness: number; sharpness: number; status: string; reasons: string[] };
+  image_b64: string;
+}
+
+export interface FootImage {
+  id: number;
+  daily_check_id: number;
+  side: string;
+  view: string;
+  sha256: string;
+  width: number;
+  height: number;
+  quality_status: string;
+  sharpness_score: number | null;
+  brightness_score: number | null;
+  captured_at: string | null;
+}
+
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     headers: { Accept: "application/json", ...(init?.body ? { "Content-Type": "application/json" } : {}) },
@@ -64,6 +87,23 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ setting_key, setting_value }),
     }),
-  cameraStatus: () => req<StatusCardData>("/api/camera/status"),
+  cameraStatus: () => req<StatusCardData>("/camera/status"),
   backupStatus: () => req<StatusCardData>("/api/backup/status"),
+
+  // Camera capture (a fresh oriented frame from the server-side camera)
+  capture: (flipH: boolean) =>
+    req<CaptureResult>(`/camera/capture${flipH ? "?flip=h" : ""}`),
+  streamUrl: (flipH: boolean) => `/camera/stream${flipH ? "?flip=h" : ""}`,
+
+  // Save an approved frame into a check
+  saveImage: (checkId: number, side: string, view: string, image_b64: string, quality: object) =>
+    req<FootImage>(`/api/checks/${checkId}/images`, {
+      method: "POST",
+      body: JSON.stringify({ side, view, image_b64, quality }),
+    }),
+  checkImages: (checkId: number) => req<FootImage[]>(`/api/checks/${checkId}/images`),
+  completeCheck: (checkId: number) =>
+    req<Check>(`/api/checks/${checkId}/complete`, { method: "POST", body: "{}" }),
+  imageUrl: (id: number) => `/api/images/${id}`,
+  thumbUrl: (id: number) => `/api/images/${id}/thumb`,
 };

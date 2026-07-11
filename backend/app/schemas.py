@@ -77,3 +77,25 @@ class CheckOut(BaseModel):
 class CheckCreate(BaseModel):
     check_date: date | None = None
     user_id: int | None = None
+
+
+class ImageIn(BaseModel):
+    side: str
+    view: str
+    image_b64: str
+    quality: dict | None = None
+
+
+class FootImageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    daily_check_id: int
+    side: str
+    view: str
+    sha256: str
+    width: int
+    height: int
+    quality_status: str
+    sharpness_score: float | None = None
+    brightness_score: float | None = None
+    captured_at: datetime | None = None

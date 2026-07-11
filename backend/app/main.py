@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.core.security import SECURITY_HEADERS
-from app.routers import checks, health, settings as settings_router, stubs
+from app.routers import checks, health, images, settings as settings_router, stubs
 
 configure_logging("DEBUG" if settings.is_dev else "INFO")
 log = get_logger("footpass.api")
@@ -66,4 +66,5 @@ async def unhandled(request: Request, exc: Exception):
 app.include_router(health.router, prefix="/api")
 app.include_router(settings_router.router, prefix="/api")
 app.include_router(checks.router, prefix="/api")
+app.include_router(images.router, prefix="/api")
 app.include_router(stubs.router, prefix="/api")

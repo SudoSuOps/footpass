@@ -68,9 +68,17 @@ services:
     env_file: .env
     environment:
       FOOTPASS_VERSION: ${FOOTPASS_VERSION:-0.1.0}
-    # Phase 2 attaches the USB camera here (see docs/camera-setup.md):
-    #   devices: ["/dev/video0:/dev/video0"]
-    #   group_add: ["video"]
+      FOOTPASS_CAMERA_INDEX: ${FOOTPASS_CAMERA_INDEX:-0}
+      FOOTPASS_CAMERA_WIDTH: ${FOOTPASS_CAMERA_WIDTH:-1280}
+      FOOTPASS_CAMERA_HEIGHT: ${FOOTPASS_CAMERA_HEIGHT:-720}
+      FOOTPASS_CAMERA_FLIP: ${FOOTPASS_CAMERA_FLIP:-}
+      FOOTPASS_CAMERA_ROTATE: ${FOOTPASS_CAMERA_ROTATE:-0}
+    # USB camera attached to the ZimaBoard. If a box has no camera, comment these
+    # two keys out — the service still starts and reports "no_camera".
+    devices:
+      - "${FOOTPASS_CAMERA_DEVICE:-/dev/video0}:/dev/video0"
+    group_add:
+      - "video"
     expose: ["8001"]
     networks: [footpass-net]
     logging: *default-logging

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api, type Check, type StatusCardData, type SystemInfo } from "../lib/api";
-import { BigButton, Card, Freddy, StatusPill } from "../components/ui";
+import { BigButton, Card, StatusPill } from "../components/ui";
 
 function todayLong(): string {
   return new Date().toLocaleDateString(undefined, {
@@ -32,7 +32,7 @@ export default function Dashboard() {
   const [camera, setCamera] = useState<StatusCardData | null>(null);
   const [backup, setBackup] = useState<StatusCardData | null>(null);
   const [system, setSystem] = useState<SystemInfo | null>(null);
-  const [started, setStarted] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     api.settings().then((s) => {
@@ -51,10 +51,10 @@ export default function Dashboard() {
 
   async function startCheck() {
     try {
-      await api.createCheck();
-      setStarted(true);
+      const check = await api.createCheck();
+      navigate(`/capture?check=${check.id}`);
     } catch {
-      setStarted(true);
+      navigate("/capture");
     }
   }
 
@@ -80,12 +80,6 @@ export default function Dashboard() {
           <p className="text-muted">Freddy will guide you through today’s photos.</p>
         </div>
         <BigButton onClick={startCheck}>▶ Start Today’s Check</BigButton>
-        {started && (
-          <Freddy>
-            I’ve started today’s check for you. The guided six-photo capture arrives in the next
-            update — for now your passport and history are ready to explore.
-          </Freddy>
-        )}
       </Card>
 
       <div className="grid grid-cols-2 gap-4">

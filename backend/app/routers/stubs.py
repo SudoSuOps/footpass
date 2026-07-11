@@ -33,14 +33,10 @@ def camera_capture() -> dict:
     raise _not_yet("Camera capture", "Phase 2")
 
 
-# ---- Images ----
-@router.get("/images/{image_id}")
-def get_image(image_id: int) -> dict:
-    raise _not_yet("Image retrieval", "Phase 2")
-
-
+# ---- Images (GET/serve + save are implemented in routers/images.py) ----
 @router.patch("/images/{image_id}")
 def patch_image(image_id: int) -> dict:
+    # Rotate/flip/crop as a *new processed* file lands in Phase 3.
     raise _not_yet("Image editing", "Phase 3")
 
 

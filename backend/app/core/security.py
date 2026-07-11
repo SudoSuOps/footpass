@@ -62,3 +62,9 @@ def safe_join(base: str | Path, *segments: str) -> Path:
     if base_path != resolved and base_path not in resolved.parents:
         raise ValueError("path escapes base directory")
     return resolved
+
+
+def resolve_under(base: str | Path, relpath: str | Path) -> Path:
+    """Resolve a stored relative path under base, each segment sanitized."""
+    parts = [p for p in Path(relpath).parts if p not in ("", "/", "\\")]
+    return safe_join(base, *parts)
