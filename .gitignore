@@ -1,0 +1,38 @@
+# Secrets / env
+.env
+.env.local
+*.pem
+*.key
+
+# Data — never commit patient images or DB
+data/
+data-dev/
+/srv/footpass/
+*.sqlite
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Docker
+docker-compose.override.yml

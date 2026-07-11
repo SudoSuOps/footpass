@@ -1,0 +1,5 @@
+fastapi~=0.115
+uvicorn[standard]~=0.32
+# Phase 2 adds camera capture:
+#   opencv-python-headless~=4.10
+#   numpy~=2.1

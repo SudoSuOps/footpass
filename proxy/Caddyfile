@@ -1,0 +1,34 @@
+# FootPass reverse proxy. HTTP only for the first local version (see
+# docs/security.md for the HTTPS-later plan). Responds on any host header so
+# both http://footpass.local and http://<ip>/ work.
+{
+	admin off
+	auto_https off
+}
+
+:80 {
+	encode gzip
+
+	# API + interactive docs + OpenAPI schema -> FastAPI
+	@api path /api/* /docs /docs/* /openapi.json
+	handle @api {
+		reverse_proxy footpass-api:8000
+	}
+
+	# Camera service (capture/preview happen ON the server, not the browser)
+	handle /camera/* {
+		reverse_proxy footpass-camera:8001
+	}
+
+	# Everything else -> the built React app
+	handle {
+		reverse_proxy footpass-ui:80
+	}
+
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+	}
+}

@@ -1,0 +1,15 @@
+FootPass — Local Foot Passport Appliance
+Copyright (c) 2026 Swarm & Bee LLC (DBA Swarm & Bee AI). All rights reserved.
+
+This is a placeholder license file. Choose and replace before public release.
+
+FootPass is a local-first health-record organization tool. It is NOT a medical
+device and does not diagnose, treat, or prevent any condition. Users own all of
+their own images and records.
+
+Until a final license is selected, this software is provided for evaluation by
+Swarm & Bee LLC and its authorized partners. No warranty is provided; use at
+your own risk.
+
+TODO(donovan): pick a final license (e.g. MIT for open, or a proprietary EULA
+for the shipped appliance) and replace this file.

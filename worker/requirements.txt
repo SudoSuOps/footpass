@@ -1,0 +1,2 @@
+# Phase 1 worker uses only the standard library (heartbeat loop).
+# Phase 4 adds: SQLAlchemy, psycopg (backup status), Pillow (thumbnails), etc.

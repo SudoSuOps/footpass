@@ -1,0 +1,131 @@
+# ============================================================
+#  FootPass — local-first Foot Passport appliance
+#  Production compose. Only the proxy is published to the host.
+#  Secrets come from .env (never inline here).
+# ============================================================
+name: footpass
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  # ---------------- PostgreSQL (metadata only, never images) ----------------
+  footpass-db:
+    image: postgres:16-alpine
+    container_name: footpass-db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - footpass-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [footpass-net]
+    logging: *default-logging
+
+  # ---------------- FastAPI backend ----------------
+  footpass-api:
+    build:
+      context: ./backend
+    container_name: footpass-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@footpass-db:5432/${POSTGRES_DB}
+      FOOTPASS_DATA_DIR: /data
+      FOOTPASS_VERSION: ${FOOTPASS_VERSION:-0.1.0}
+      FOOTPASS_ENV: ${FOOTPASS_ENV:-production}
+    volumes:
+      - ${FOOTPASS_DATA_DIR:-/srv/footpass}:/data
+    depends_on:
+      footpass-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/health').status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    expose: ["8000"]
+    networks: [footpass-net]
+    logging: *default-logging
+
+  # ---------------- Camera service (health stub in Phase 1; V4L2 in Phase 2) ----------------
+  footpass-camera:
+    build:
+      context: ./camera-service
+    container_name: footpass-camera
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      FOOTPASS_VERSION: ${FOOTPASS_VERSION:-0.1.0}
+    # Phase 2 attaches the USB camera here (see docs/camera-setup.md):
+    #   devices: ["/dev/video0:/dev/video0"]
+    #   group_add: ["video"]
+    expose: ["8001"]
+    networks: [footpass-net]
+    logging: *default-logging
+
+  # ---------------- Background worker (backup/exports later) ----------------
+  footpass-worker:
+    build:
+      context: ./worker
+    container_name: footpass-worker
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@footpass-db:5432/${POSTGRES_DB}
+      FOOTPASS_DATA_DIR: /data
+    volumes:
+      - ${FOOTPASS_DATA_DIR:-/srv/footpass}:/data
+    depends_on:
+      footpass-db:
+        condition: service_healthy
+    networks: [footpass-net]
+    logging: *default-logging
+
+  # ---------------- Frontend (built static, served by nginx) ----------------
+  footpass-ui:
+    build:
+      context: ./frontend
+    container_name: footpass-ui
+    restart: unless-stopped
+    expose: ["80"]
+    networks: [footpass-net]
+    logging: *default-logging
+
+  # ---------------- Reverse proxy (only host-facing service) ----------------
+  footpass-proxy:
+    image: caddy:2-alpine
+    container_name: footpass-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      # - "443:443"   # enable for optional local HTTPS later (docs/security.md)
+    volumes:
+      - ./proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - footpass-ui
+      - footpass-api
+    networks: [footpass-net]
+    logging: *default-logging
+
+networks:
+  footpass-net:
+    driver: bridge
+
+volumes:
+  footpass-db-data:
+  caddy-data:
+  caddy-config:

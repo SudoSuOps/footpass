@@ -1,0 +1,38 @@
+# ============================================================
+#  FootPass — development override.
+#  Usage:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#  Publishes the API to the host for debugging and turns on dev logging.
+#  NOTE: this file only overrides; it does not re-expose PostgreSQL.
+# ============================================================
+name: footpass
+
+services:
+  footpass-api:
+    environment:
+      FOOTPASS_ENV: development
+    ports:
+      - "8000:8000"   # dev-only: reach the API + /docs directly at :8000
+
+  footpass-camera:
+    environment:
+      FOOTPASS_ENV: development
+    # Attach the USB camera for local camera-service work (Phase 2):
+    # devices:
+    #   - "/dev/video0:/dev/video0"
+    # group_add:
+    #   - "video"
+
+  # ---- Optional GPU worker (NVIDIA runtime). Enable with:  --profile gpu ----
+  footpass-worker:
+    profiles: ["gpu"]
+    environment:
+      FOOTPASS_ENV: development
+      NVIDIA_VISIBLE_DEVICES: all
+    # Requires nvidia-container-toolkit on the host. See docs/gpu-support.md.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: ["gpu"]
