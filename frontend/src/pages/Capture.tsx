@@ -34,12 +34,16 @@ export default function Capture() {
   const [saving, setSaving] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [voiceOn, setVoiceOn] = useState(false);
   const voiceRef = useRef(false);
 
   useEffect(() => {
     api.cameraStatus().then((s) => setCameraOk(s.available)).catch(() => setCameraOk(false));
     api.settings().then((rows) => {
-      voiceRef.current = rows.find((r) => r.setting_key === "voice_guidance")?.setting_value === "true";
+      const on = rows.find((r) => r.setting_key === "voice_guidance")?.setting_value === "true";
+      setVoiceOn(on);
+      voiceRef.current = on;
     }).catch(() => {});
     if (checkId === null) {
       api.createCheck().then((c) => setCheckId(c.id)).catch(() => {});
@@ -54,11 +58,21 @@ export default function Capture() {
     }
   };
 
+  function toggleVoice() {
+    const next = !voiceOn;
+    setVoiceOn(next);
+    voiceRef.current = next;
+    api.saveSetting("voice_guidance", String(next)).catch(() => {});
+    if (next && "speechSynthesis" in window) {
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance("Voice on. I will guide you."));
+    }
+  }
+
   const doCapture = useCallback(async () => {
     if (busy || captured) return;
     setBusy(true);
     try {
-      const shot = await api.capture(flipH);
+      const shot = await api.capture(flipH, zoom);
       setCaptured(shot);
       say(shot.quality.status === "pass" ? "Photo captured." : "That photo may be blurry. Let’s try again.");
     } catch {
@@ -66,7 +80,7 @@ export default function Capture() {
     } finally {
       setBusy(false);
     }
-  }, [busy, captured, flipH]);
+  }, [busy, captured, flipH, zoom]);
 
   const startCountdown = () => {
     if (busy || captured || countdown !== null) return;
@@ -187,8 +201,8 @@ export default function Capture() {
         ) : (
           <>
             <img
-              key={String(flipH)}
-              src={api.streamUrl(flipH)}
+              key={`${flipH}-${zoom}`}
+              src={api.streamUrl(flipH, zoom)}
               alt="live preview"
               className="w-full"
             />
@@ -239,16 +253,48 @@ export default function Capture() {
         </div>
       ) : (
         <div className="space-y-3">
+          {/* zoom — tight foot close-up */}
+          <div className="flex items-center gap-2">
+            <span className="w-12 text-sm font-semibold text-muted">Zoom</span>
+            {[1, 1.5, 2, 3].map((z) => (
+              <button
+                key={z}
+                onClick={() => setZoom(z)}
+                className={`flex-1 rounded-xl2 py-2 text-sm font-semibold ${
+                  zoom === z ? "bg-brand text-white" : "bg-white ring-2 ring-brand/20 text-ink"
+                }`}
+              >
+                {z}×
+              </button>
+            ))}
+          </div>
+
           <BigButton onClick={doCapture} disabled={busy || cameraOk === false}>
             📸 Capture <span className="text-base font-normal opacity-80">(or press space)</span>
           </BigButton>
-          <div className="grid grid-cols-2 gap-3">
-            <BigButton variant="secondary" onClick={startCountdown} disabled={cameraOk === false}>
-              ⏱ 3-2-1 timer
-            </BigButton>
-            <BigButton variant="secondary" onClick={() => setFlipH((f) => !f)}>
+
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={startCountdown}
+              disabled={cameraOk === false}
+              className="rounded-xl2 bg-white py-3 text-sm font-semibold text-ink ring-2 ring-ink/10 disabled:opacity-50"
+            >
+              ⏱ Timer
+            </button>
+            <button
+              onClick={() => setFlipH((f) => !f)}
+              className="rounded-xl2 bg-white py-3 text-sm font-semibold text-ink ring-2 ring-ink/10"
+            >
               {flipH ? "⇄ Flipped" : "⇄ Flip"}
-            </BigButton>
+            </button>
+            <button
+              onClick={toggleVoice}
+              className={`rounded-xl2 py-3 text-sm font-semibold ring-2 ${
+                voiceOn ? "bg-brand/10 text-brand ring-brand/30" : "bg-white text-ink ring-ink/10"
+              }`}
+            >
+              {voiceOn ? "🔊 Voice" : "🔇 Voice"}
+            </button>
           </div>
         </div>
       )}

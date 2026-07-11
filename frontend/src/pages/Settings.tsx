@@ -14,6 +14,15 @@ export default function Settings() {
     }).catch(() => {});
   }, []);
 
+  function testVoice() {
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(
+        new SpeechSynthesisUtterance("Hello, I'm Freddy. I'll guide you through today's photos."),
+      );
+    }
+  }
+
   async function save() {
     await Promise.all([
       api.saveSetting("display_name", name.trim() || "friend"),
@@ -46,8 +55,16 @@ export default function Settings() {
             className="h-6 w-6 accent-brand"
           />
         </label>
+        <button
+          onClick={testVoice}
+          className="rounded-xl2 bg-white px-4 py-2 text-sm font-semibold text-brand ring-2 ring-brand/20"
+        >
+          🔊 Test voice
+        </button>
         <p className="text-xs text-muted">
-          Uses your browser’s built-in speech only. No cloud speech service. Off by default.
+          Uses your device’s built-in speech only — no cloud. Off by default. If “Test voice” is
+          silent on a desktop Linux browser, that device has no speech voice installed — try from
+          your phone or a Mac, where it works out of the box.
         </p>
 
         <BigButton onClick={save}>{saved ? "Saved ✓" : "Save settings"}</BigButton>

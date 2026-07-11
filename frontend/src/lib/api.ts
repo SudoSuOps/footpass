@@ -67,6 +67,13 @@ export interface FootImage {
   captured_at: string | null;
 }
 
+function camQuery(flipH: boolean, zoom: number): string {
+  const p = new URLSearchParams();
+  if (flipH) p.set("flip", "h");
+  if (zoom > 1) p.set("zoom", String(zoom));
+  return p.toString();
+}
+
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     headers: { Accept: "application/json", ...(init?.body ? { "Content-Type": "application/json" } : {}) },
@@ -90,10 +97,10 @@ export const api = {
   cameraStatus: () => req<StatusCardData>("/camera/status"),
   backupStatus: () => req<StatusCardData>("/api/backup/status"),
 
-  // Camera capture (a fresh oriented frame from the server-side camera)
-  capture: (flipH: boolean) =>
-    req<CaptureResult>(`/camera/capture${flipH ? "?flip=h" : ""}`),
-  streamUrl: (flipH: boolean) => `/camera/stream${flipH ? "?flip=h" : ""}`,
+  // Camera capture (a fresh oriented + zoomed frame from the server-side camera)
+  capture: (flipH: boolean, zoom: number) =>
+    req<CaptureResult>(`/camera/capture?${camQuery(flipH, zoom)}`),
+  streamUrl: (flipH: boolean, zoom: number) => `/camera/stream?${camQuery(flipH, zoom)}`,
 
   // Save an approved frame into a check
   saveImage: (checkId: number, side: string, view: string, image_b64: string, quality: object) =>

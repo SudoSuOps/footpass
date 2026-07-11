@@ -45,11 +45,23 @@ def _orient(frame: np.ndarray, flip: str, rotate: int) -> np.ndarray:
     return frame
 
 
-def _resolve(flip: str | None, rotate: int | None) -> tuple[str, int]:
-    """Per-request orientation overrides the env default."""
+def _zoom_crop(frame: np.ndarray, zoom: float) -> np.ndarray:
+    """Center-crop for digital zoom. zoom=1.0 is untouched; 2.0 = 2x closer."""
+    if zoom <= 1.0:
+        return frame
+    zoom = min(zoom, 5.0)
+    h, w = frame.shape[:2]
+    cw, ch = int(w / zoom), int(h / zoom)
+    x0, y0 = (w - cw) // 2, (h - ch) // 2
+    return frame[y0:y0 + ch, x0:x0 + cw]
+
+
+def _resolve(flip: str | None, rotate: int | None, zoom: float | None) -> tuple[str, int, float]:
+    """Per-request orientation/zoom overrides the env default."""
     f = FLIP if flip is None else flip.lower()
     r = ROTATE if rotate is None else rotate
-    return f, r
+    z = 1.0 if zoom is None else max(1.0, min(zoom, 5.0))
+    return f, r, z
 
 
 class Camera:
@@ -85,13 +97,15 @@ class Camera:
                 self._frame = frame  # store RAW; orientation applied at read time
             time.sleep(0.01)
 
-    def latest(self, flip: str = "", rotate: int = 0) -> np.ndarray | None:
+    def latest(self, flip: str = "", rotate: int = 0, zoom: float = 1.0) -> np.ndarray | None:
         with self._lock:
             frame = None if self._frame is None else self._frame.copy()
-        return None if frame is None else _orient(frame, flip, rotate)
+        if frame is None:
+            return None
+        return _zoom_crop(_orient(frame, flip, rotate), zoom)
 
-    def jpeg(self, quality: int, flip: str, rotate: int) -> bytes | None:
-        frame = self.latest(flip, rotate)
+    def jpeg(self, quality: int, flip: str, rotate: int, zoom: float) -> bytes | None:
+        frame = self.latest(flip, rotate, zoom)
         if frame is None:
             return None
         ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
@@ -146,10 +160,10 @@ def status() -> dict:
     }
 
 
-def _mjpeg(flip: str, rotate: int):
+def _mjpeg(flip: str, rotate: int, zoom: float):
     boundary = b"--frame"
     while True:
-        jpg = camera.jpeg(75, flip, rotate)
+        jpg = camera.jpeg(75, flip, rotate, zoom)
         if jpg is None:
             time.sleep(0.1)
             continue
@@ -158,19 +172,23 @@ def _mjpeg(flip: str, rotate: int):
 
 
 @app.get("/camera/stream")
-def stream(flip: str | None = None, rotate: int | None = None) -> StreamingResponse:
+def stream(
+    flip: str | None = None, rotate: int | None = None, zoom: float | None = None
+) -> StreamingResponse:
     if not camera.available:
         raise HTTPException(status_code=503, detail="No camera available.")
-    f, r = _resolve(flip, rotate)
-    return StreamingResponse(_mjpeg(f, r), media_type="multipart/x-mixed-replace; boundary=frame")
+    f, r, z = _resolve(flip, rotate, zoom)
+    return StreamingResponse(_mjpeg(f, r, z), media_type="multipart/x-mixed-replace; boundary=frame")
 
 
 @app.get("/camera/capture")
-def capture(flip: str | None = None, rotate: int | None = None) -> dict:
+def capture(
+    flip: str | None = None, rotate: int | None = None, zoom: float | None = None
+) -> dict:
     if not camera.available:
         raise HTTPException(status_code=503, detail="No camera available.")
-    f, r = _resolve(flip, rotate)
-    frame = camera.latest(f, r)
+    f, r, z = _resolve(flip, rotate, zoom)
+    frame = camera.latest(f, r, z)
     if frame is None:
         raise HTTPException(status_code=503, detail="No frame yet — try again in a moment.")
     ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 92])
